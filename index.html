@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitoring Dashboard</title>
+    
+    <!-- CSS & Fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --info-color: #1abc9c;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            --transition-speed: 0.3s;
+        }
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding-bottom: 2rem;
+        }
+        
+        /* Header & Navigation */
+        .dashboard-header {
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            padding: 1.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.05"><path fill="white" d="M73,50c0-12.7-10.3-23-23-23S27,37.3,27,50 M30.9,50c0-10.5,8.5-19.1,19.1-19.1S69.1,39.5,69.1,50"/></svg>');
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo {
+            font-weight: 700;
+            font-size: 1.8rem;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-icon {
+            background: rgba(255, 255, 255, 0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Stats Cards */
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            transition: all var(--transition-speed) ease;
+            border: none;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: var(--secondary-color);
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+        }
+        
+        .stats-card.online {
+            --card-color: var(--success-color);
+        }
+        
+        .stats-card.offline {
+            --card-color: var(--danger-color);
+        }
+        
+        .stats-card.total {
+            --card-color: var(--primary-color);
+        }
+        
+        .stats-card::before {
+            background: var(--card-color);
+        }
+        
+        .stats-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            color: white;
+        }
+        
+        .stats-card.online .stats-icon {
+            background: linear-gradient(135deg, var(--success-color) 0%, #2ecc71 100%);
+        }
+        
+        .stats-card.offline .stats-icon {
+            background: linear-gradient(135deg, var(--danger-color) 0%, #c0392b 100%);
+        }
+        
+        .stats-card.total .stats-icon {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #34495e 100%);
+        }
+        
+        .stats-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--dark-color);
+        }
+        
+        .stats-label {
+            color: #7f8c8d;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        
+        .stats-change {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        
+        .stats-change.positive {
+            color: var(--success-color);
+        }
+        
+        .stats-change.negative {
+            color: var(--danger-color);
+        }
+        
+        /* Main Content Card */
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            border: none;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .card-header-custom {
+            background: white;
+            border-bottom: 1px solid #eee;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header-custom h3 {
+            margin: 0;
+            font-weight: 600;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Filter Section */
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-box .bi-search {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #95a5a6;
+        }
+        
+        .search-box input {
+            padding-left: 45px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            transition: all var(--transition-speed);
+        }
+        
+        .search-box input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        /* Table Styling */
+        .table-container {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e9ecef;
+        }
+        
+        .table-custom {
+            margin: 0;
+        }
+        
+        .table-custom thead {
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        }
+        
+        .table-custom th {
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            padding: 1rem 1.5rem;
+            border: none;
+            white-space: nowrap;
+        }
+        
+        .table-custom td {
+            padding: 1rem 1.5rem;
+            vertical-align: middle;
+            border-color: #eee;
+            transition: background-color var(--transition-speed);
+        }
+        
+        .table-custom tbody tr {
+            transition: all var(--transition-speed);
+        }
+        
+        .table-custom tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+            transform: scale(1.002);
+        }
+        
+        .table-custom tbody tr.online-row {
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .table-custom tbody tr.offline-row {
+            border-left: 4px solid var(--danger-color);
+            background-color: rgba(231, 76, 60, 0.03) !important;
+            animation: pulse-offline 2s infinite;
+        }
+        
+        @keyframes pulse-offline {
+            0% { background-color: rgba(231, 76, 60, 0.03); }
+            50% { background-color: rgba(231, 76, 60, 0.08); }
+            100% { background-color: rgba(231, 76, 60, 0.03); }
+        }
+        
+        .status-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .status-badge.online {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+        }
+        
+        .status-badge.offline {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+        }
+        
+        .device-name {
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+        
+        .device-ip {
+            font-family: 'Courier New', monospace;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem; 
+            box-shadow: var(--card-shadow);
+            height: auto; 
+            min-height: 300px; 
+        }
+
+        /* Giới hạn chiều cao cho row chứa chart */
+        .row.mb-4 {
+            align-items: stretch;
+        }
+
+        /* Giới hạn chiều cao cho canvas */
+        #statusChart {
+            max-height: 250px; /* Giới hạn chiều cao tối đa */
+            width: 100% !important;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        /* Responsive cho chart */
+        @media (max-width: 992px) {
+            .chart-container {
+                min-height: 250px;
+                padding: 1rem;
+            }
+            
+            #statusChart {
+                max-height: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                min-height: 200px;
+                margin-bottom: 1.5rem; /* Thêm khoảng cách dưới */
+            }
+            
+            #statusChart {
+                max-height: 180px;
+            }
+        }
+        
+        /* Pagination */
+        .pagination-custom .page-item .page-link {
+            border: none;
+            color: var(--primary-color);
+            border-radius: 8px;
+            margin: 0 3px;
+            transition: all var(--transition-speed);
+        }
+        
+        .pagination-custom .page-item.active .page-link {
+            background: linear-gradient(90deg, var(--secondary-color) 0%, #2980b9 100%);
+            color: white;
+        }
+        
+        .pagination-custom .page-item .page-link:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        /* Buttons */
+        .btn-gradient {
+            background: linear-gradient(90deg, var(--secondary-color) 0%, #2980b9 100%);
+            border: none;
+            color: white;
+            border-radius: 10px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            transition: all var(--transition-speed);
+        }
+        
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            color: white;
+        }
+        
+        .btn-outline-custom {
+            border: 2px solid var(--secondary-color);
+            color: var(--secondary-color);
+            background: transparent;
+            border-radius: 10px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            transition: all var(--transition-speed);
+        }
+        
+        .btn-outline-custom:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+        
+        /* Loading Animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .spinner-custom {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        .toast-custom {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            border-left: 5px solid var(--success-color);
+            margin-bottom: 1rem;
+            animation: slideInRight 0.3s ease;
+        }
+        
+        .toast-custom.error {
+            border-left-color: var(--danger-color);
+        }
+        
+        .toast-custom.warning {
+            border-left-color: var(--warning-color);
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Footer */
+        .dashboard-footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            margin-top: 3rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 1rem 0;
+            }
+            
+            .stats-card {
+                margin-bottom: 1rem;
+            }
+            
+            .table-custom th,
+            .table-custom td {
+                padding: 0.75rem 1rem;
+            }
+            
+            .card-header-custom {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+        }
+        
+        /* Dark Mode Toggle */
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+        }
+        
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        /* Điều chỉnh bảng cho 8 cột */
+        .table-custom th:nth-child(7),
+        .table-custom th:nth-child(8),
+        .table-custom td:nth-child(7),
+        .table-custom td:nth-child(8) {
+            min-width: 150px;
+        }
+
+        /* Responsive cho bảng */
+        @media (max-width: 1200px) {
+            .table-responsive {
+                font-size: 0.9rem;
+            }
+            
+            .table-custom th:nth-child(7),
+            .table-custom th:nth-child(8),
+            .table-custom td:nth-child(7),
+            .table-custom td:nth-child(8) {
+                min-width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner-custom"></div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- Dashboard Header -->
+    <header class="dashboard-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <a href="#" class="logo">
+                            <span class="logo-icon">
+                                <i class="bi bi-router"></i>
+                            </span>
+                            <span>Network Monitor</span>
+                        </a>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="d-flex align-items-center justify-content-end gap-3">
+                            <div class="text-white">
+                                <i class="bi bi-clock me-1"></i>
+                                <span id="currentTime">--:--:--</span>
+                            </div>
+                            <button class="theme-toggle" id="themeToggle">
+                                <i class="bi bi-moon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stats-card total animate__animated animate__fadeInLeft">
+                    <div class="stats-icon">
+                        <i class="bi bi-pc-display"></i>
+                    </div>
+                    <div class="stats-number" id="totalDevices">0</div>
+                    <div class="stats-label">Tổng Thiết Bị</div>
+                    <div class="stats-change positive">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <span>+2 hôm nay</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card online animate__animated animate__fadeInUp">
+                    <div class="stats-icon">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="stats-number" id="onlineDevices">0</div>
+                    <div class="stats-label">Thiết Bị Online</div>
+                    <div class="stats-change positive" id="onlineChange">
+                        <i class="bi bi-graph-up-arrow"></i>
+                        <span>Đang cập nhật...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card offline animate__animated animate__fadeInRight">
+                    <div class="stats-icon">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="stats-number" id="offlineDevices">0</div>
+                    <div class="stats-label">Thiết Bị Offline</div>
+                    <div class="stats-change negative" id="offlineChange">
+                        <i class="bi bi-graph-down-arrow"></i>
+                        <span>Đang cập nhật...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chart & Filter Row -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="chart-container animate__animated animate__fadeIn">
+                    <div class="chart-header">
+                        <h4 class="mb-0">
+                            <i class="bi bi-pie-chart-fill me-2"></i>
+                            Phân Phối Trạng Thái Thiết Bị
+                        </h4>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-custom dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-calendar me-1"></i> 24 giờ qua
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#">24 giờ qua</a></li>
+                                <li><a class="dropdown-item" href="#">7 ngày qua</a></li>
+                                <li><a class="dropdown-item" href="#">30 ngày qua</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <canvas id="statusChart" height="250"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="filter-section animate__animated animate__fadeIn">
+                    <h5 class="mb-3">
+                        <i class="bi bi-funnel me-2"></i>
+                        Bộ Lọc & Tìm Kiếm
+                    </h5>
+                    
+                    <div class="search-box mb-3">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="searchInput" class="form-control" placeholder="Tìm theo tên, IP...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Trạng Thái</label>
+                        <select id="statusFilter" class="form-select">
+                            <option value="all">Tất cả trạng thái</option>
+                            <option value="Online">Online</option>
+                            <option value="Offline">Offline</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Số Dòng / Trang</label>
+                        <select id="perPageSelect" class="form-select">
+                            <option value="10">10 dòng</option>
+                            <option value="20" selected>20 dòng</option>
+                            <option value="50">50 dòng</option>
+                            <option value="100">100 dòng</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button id="reloadButton" class="btn btn-gradient">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Tải Lại Dữ Liệu
+                        </button>
+                        <button id="clearFilters" class="btn btn-outline-custom">
+                            <i class="bi bi-x-circle me-1"></i> Xóa Bộ Lọc
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Table Card -->
+        <div class="main-card animate__animated animate__fadeIn">
+            <div class="card-header-custom">
+                <h3>
+                    <i class="bi bi-table me-2"></i>
+                    Danh Sách Thiết Bị
+                    <span class="badge bg-secondary ms-2" id="filteredCount">0</span>
+                </h3>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-custom" id="exportBtn">
+                        <i class="bi bi-download me-1"></i> Xuất CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Thiết Bị</th>
+                                    <th>Địa Chỉ IP</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Cập Nhật Cuối</th>
+                                    <th>Thời Gian Trạng Thái</th>
+                                    <th>Bắt Đầu Offline</th>
+                                    <th>Thời Gian Offline</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deviceTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Đang tải...</span>
+                                        </div>
+                                        <p class="mt-2 text-muted">Đang tải dữ liệu thiết bị...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <nav aria-label="Page navigation" class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-muted" id="paginationInfo">
+                            Hiển thị 0 trong tổng số 0 thiết bị
+                        </div>
+                        <ul class="pagination pagination-custom mb-0" id="pagination">
+                            <!-- Pagination sẽ được tạo bởi JavaScript -->
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-start">
+                    <p class="mb-0">
+                        <i class="bi bi-cpu me-1"></i>
+                        Hệ thống giám sát mạng thời gian thực
+                    </p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <p class="mb-0">
+                        <i class="bi bi-clock-history me-1"></i>
+                        Cập nhật tự động mỗi: <span id="updateInterval">5</span> giây
+                        <button class="btn btn-sm btn-link p-0 ms-2" id="changeInterval">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Biến toàn cục
+        let statusChart;
+        let currentPage = 1;
+        let currentSearch = '';
+        let currentStatus = 'all';
+        let currentPerPage = 20;
+        let updateInterval = 5000; // 5 giây
+        let updateTimer;
+        let previousStats = { online: 0, offline: 0, total: 0 };
+        
+        // Khởi tạo
+        document.addEventListener('DOMContentLoaded', function() {
+            initClock();
+            initTheme();
+            loadData();
+            initEventListeners();
+            startRealTimeUpdates();
+            //startAutoUpdate(); #loadData đã gọi 
+        });
+        
+        // Khởi tạo đồng hồ thời gian thực
+        function initClock() {
+            function updateClock() {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('vi-VN', { 
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                document.getElementById('currentTime').textContent = timeStr;
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+        
+        // Khởi tạo theme (dark/light mode)
+        function initTheme() {
+            const themeToggle = document.getElementById('themeToggle');
+            const isDarkMode = localStorage.getItem('darkMode') === 'true';
+            
+            if (isDarkMode) {
+                enableDarkMode();
+                themeToggle.innerHTML = '<i class="bi bi-sun"></i>';
+            }
+            
+            themeToggle.addEventListener('click', function() {
+                const isDark = document.body.classList.contains('dark-mode');
+                if (isDark) {
+                    disableDarkMode();
+                    this.innerHTML = '<i class="bi bi-moon"></i>';
+                } else {
+                    enableDarkMode();
+                    this.innerHTML = '<i class="bi bi-sun"></i>';
+                }
+            });
+        }
+        
+        function enableDarkMode() {
+            document.body.classList.add('dark-mode');
+            document.body.style.backgroundColor = '#1a1a2e';
+            document.body.style.color = '#e6e6e6';
+            localStorage.setItem('darkMode', 'true');
+        }
+        
+        function disableDarkMode() {
+            document.body.classList.remove('dark-mode');
+            document.body.style.backgroundColor = '';
+            document.body.style.color = '';
+            localStorage.setItem('darkMode', 'false');
+        }
+        
+        // Hiển thị loading
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+        
+        // Ẩn loading
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+        
+        // Hiển thị toast thông báo
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            
+            const toast = document.createElement('div');
+            toast.className = `toast-custom ${type}`;
+            toast.id = toastId;
+            toast.innerHTML = `
+                <div class="toast-body p-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="bi ${type === 'success' ? 'bi-check-circle-fill text-success' : 
+                                        type === 'error' ? 'bi-exclamation-circle-fill text-danger' : 
+                                        'bi-info-circle-fill text-warning'} me-2"></i>
+                            <strong>${type === 'success' ? 'Thành công' : 
+                                    type === 'error' ? 'Lỗi' : 'Thông báo'}</strong>
+                        </div>
+                        <button type="button" class="btn-close" onclick="document.getElementById('${toastId}').remove()"></button>
+                    </div>
+                    <div class="mt-2">${message}</div>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Tự động xóa sau 5 giây
+            setTimeout(() => {
+                if (document.getElementById(toastId)) {
+                    document.getElementById(toastId).remove();
+                }
+            }, 5000);
+        }
+        
+        // Tải dữ liệu
+        async function loadData() {
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/devices?page=${currentPage}&per_page=${currentPerPage}&status=${currentStatus}&search=${encodeURIComponent(currentSearch)}`);
+                const data = await response.json();
+                
+                updateStatsCards(data);
+                updateTable(data);
+                updateChart(data);
+                updatePagination(data);
+                
+                // Lưu stats để so sánh
+                previousStats = {
+                    online: data.online_count,
+                    offline: data.offline_count,
+                    total: data.total
+                };
+                
+            } catch (error) {
+                console.error('Lỗi khi tải dữ liệu:', error);
+                showToast('Không thể tải dữ liệu từ máy chủ', 'error');
+            } finally {
+                hideLoading();
+                startAutoUpdate();
+            }
+        }
+        
+        // Cập nhật stats cards
+        function updateStatsCards(data) {
+            document.getElementById('totalDevices').textContent = data.total;
+            document.getElementById('onlineDevices').textContent = data.online_count;
+            document.getElementById('offlineDevices').textContent = data.offline_count;
+            
+            // Tính phần trăm
+            const onlinePercent = data.total > 0 ? ((data.online_count / data.total) * 100).toFixed(1) : 0;
+            const offlinePercent = data.total > 0 ? ((data.offline_count / data.total) * 100).toFixed(1) : 0;
+            
+            // Cập nhật thay đổi
+            const onlineChange = document.getElementById('onlineChange');
+            const offlineChange = document.getElementById('offlineChange');
+            
+            onlineChange.innerHTML = `
+                <i class="bi bi-graph-up-arrow"></i>
+                <span>${onlinePercent}% uptime</span>
+            `;
+            
+            offlineChange.innerHTML = `
+                <i class="bi ${data.offline_count > 0 ? 'bi-graph-up-arrow text-danger' : 'bi-graph-down-arrow text-success'}"></i>
+                <span>${offlinePercent}% downtime</span>
+            `;
+        }
+        
+        // Cập nhật bảng
+        function updateTable(data) {
+            const tbody = document.getElementById('deviceTableBody');
+            const filteredCount = document.getElementById('filteredCount');
+            
+            filteredCount.textContent = data.total;
+            
+            if (data.devices.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="bi bi-search display-4 text-muted mb-3"></i>
+                            <h5 class="text-muted">Không tìm thấy thiết bị nào</h5>
+                            <p class="text-muted">Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let html = '';
+            data.devices.forEach((device, index) => {
+                const isOnline = device['Trạng Thái'] === 'Online';
+                const rowClass = isOnline ? 'online-row' : 'offline-row';
+                
+                const deviceName = highlightText(device['Tên'], currentSearch);
+                const deviceIP = highlightText(device.IP, currentSearch);
+                
+                // Lấy timestamp
+                const timestamp = device.last_update_timestamp || Math.floor(Date.now() / 1000);
+                const batDauOffline = device['Bắt Đầu Offline'] || '--';
+                const offlineDuration = device['Offline Duration'] || '--';
+                
+                // Thêm hiển thị độ trễ nếu có
+                const latencyDisplay = device.Latency ? 
+                    `<small class="text-muted d-block mt-1">Độ trễ: ${device.Latency}ms</small>` : '';
+                
+                html += `
+                    <tr class="${rowClass}" data-timestamp="${timestamp}">
+                        <td><strong>${(currentPage - 1) * currentPerPage + index + 1}</strong></td>
+                        <td>
+                            <div class="device-name">${deviceName}</div>
+                            ${latencyDisplay}
+                            <small class="text-muted d-block">ID: ${device.STT}</small>
+                        </td>
+                        <td class="device-ip">${deviceIP}</td>
+                        <td>
+                            <span class="status-badge ${isOnline ? 'online' : 'offline'}">
+                                <i class="bi ${isOnline ? 'bi-check-circle' : 'bi-exclamation-triangle'}"></i>
+                                ${device['Trạng Thái']}
+                            </span>
+                            <button class="btn btn-sm btn-outline-custom ms-2 ping-btn" data-ip="${device.IP}" title="Ping thử">
+                                <i class="bi bi-broadcast"></i>
+                            </button>
+                        </td>
+                        <td>
+                            <div class="text-nowrap">${device['Cập nhật lúc'] || '--'}</div>
+                            <small class="text-muted">
+                                vừa xong
+                            </small>
+                        </td>
+                        <td>${device['Thời gian Trạng thái'] || '--'}</td>
+                        <td>
+                            ${!isOnline && batDauOffline !== '--' ? 
+                                `<span class="text-danger fw-bold">${batDauOffline}</span>` : 
+                                '<span class="text-muted">--</span>'}
+                        </td>
+                        <td>
+                            ${!isOnline && offlineDuration !== '--' ? 
+                                `<span class="badge bg-danger">${offlineDuration}</span>` : 
+                                '<span class="text-muted">--</span>'}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Cập nhật thông tin phân trang
+            document.getElementById('paginationInfo').innerHTML = `
+                Hiển thị <strong>${data.devices.length}</strong> trong tổng số <strong>${data.total}</strong> thiết bị
+            `;
+        }
+        
+        // Tô sáng văn bản
+        function highlightText(text, search) {
+            if (!search || !text) return text;
+            
+            const regex = new RegExp(`(${search})`, 'gi');
+            return text.replace(regex, '<mark class="bg-warning">$1</mark>');
+        }
+        
+        // Cập nhật biểu đồ
+        function updateChart(data) {
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            
+            if (statusChart) {
+                statusChart.destroy();
+            }
+            
+            const onlinePercent = data.total > 0 ? ((data.online_count / data.total) * 100).toFixed(1) : 0;
+            const offlinePercent = data.total > 0 ? ((data.offline_count / data.total) * 100).toFixed(1) : 0;
+            
+            statusChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [`Online (${onlinePercent}%)`, `Offline (${offlinePercent}%)`],
+                    datasets: [{
+                        data: [data.online_count, data.offline_count],
+                        backgroundColor: [
+                            'rgba(39, 174, 96, 0.8)',
+                            'rgba(231, 76, 60, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(39, 174, 96, 1)',
+                            'rgba(231, 76, 60, 1)'
+                        ],
+                        borderWidth: 2,
+                        hoverOffset: 20,
+                        borderRadius: 10,
+                        spacing: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return `${label.split('(')[0]}: ${value} thiết bị (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
+                    }
+                }
+            });
+        }
+        
+        // Cập nhật phân trang
+        function updatePagination(data) {
+            const pagination = document.getElementById('pagination');
+            const totalPages = data.total_pages;
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            const maxVisible = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+            
+            if (endPage - startPage + 1 < maxVisible) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+            
+            // Nút Previous
+            html += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage - 1}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+            
+            // Nút đầu tiên
+            if (startPage > 1) {
+                html += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="1">1</a>
+                    </li>
+                `;
+                if (startPage > 2) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+            }
+            
+            // Các nút số trang
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `;
+            }
+            
+            // Nút cuối cùng
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                }
+                html += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a>
+                    </li>
+                `;
+            }
+            
+            // Nút Next
+            html += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage + 1}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+            
+            pagination.innerHTML = html;
+        }
+        
+        // Khởi tạo event listeners
+        function initEventListeners() {
+            // Tìm kiếm với debounce
+            let searchTimer;
+            document.getElementById('searchInput').addEventListener('input', function() {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    currentSearch = this.value;
+                    currentPage = 1;
+                    loadData();
+                }, 500);
+            });
+            //phím tắt
+            document.addEventListener('keydown', (e) => {
+                // Ctrl+R: Refresh
+                if (e.ctrlKey && e.key === 'r') {
+                    e.preventDefault();
+                    loadData();
+                }
+                // Ctrl+F: Focus search
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+                // Ctrl+E: Export CSV
+                if (e.ctrlKey && e.key === 'e') {
+                    e.preventDefault();
+                    exportToCSV();
+                }
+                // Space: Toggle auto-refresh (nếu muốn)
+                if (e.key === ' ' && e.target.tagName !== 'INPUT') {
+                    e.preventDefault();
+                    // toggleAutoRefresh();
+                }
+            });
+            // Thêm event listener cho ping
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.ping-btn')) {
+                    const ip = e.target.closest('.ping-btn').getAttribute('data-ip');
+                    pingDevice(ip);
+                }
+            });
+
+            function pingDevice(ip) {
+                const originalButton = document.querySelector(`.ping-btn[data-ip="${ip}"]`);
+                const originalHtml = originalButton ? originalButton.innerHTML : '';
+                
+                if (originalButton) {
+                    originalButton.innerHTML = '<i class="bi bi-hourglass"></i>';
+                    originalButton.disabled = true;
+                }
+                
+                fetch(`/api/ping/${ip}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        showToast(`Ping ${ip}: ${data.status} (${data.latency_text})`, 
+                                data.status === 'Online' ? 'success' : 'error');
+                        // Refresh lại dữ liệu
+                        setTimeout(() => loadData(), 1000);
+                    })
+                    .catch(error => {
+                        showToast(`Lỗi khi ping ${ip}`, 'error');
+                    })
+                    .finally(() => {
+                        if (originalButton) {
+                            setTimeout(() => {
+                                originalButton.innerHTML = originalHtml;
+                                originalButton.disabled = false;
+                            }, 1000);
+                        }
+                    });
+            }
+            // Lọc trạng thái
+            document.getElementById('statusFilter').addEventListener('change', function() {
+                currentStatus = this.value;
+                currentPage = 1;
+                loadData();
+            });
+            
+            // Thay đổi số dòng mỗi trang
+            document.getElementById('perPageSelect').addEventListener('change', function() {
+                currentPerPage = parseInt(this.value);
+                currentPage = 1;
+                loadData();
+            });
+            
+            // Nút tải lại
+            document.getElementById('reloadButton').addEventListener('click', function() {
+                const btn = this;
+                const originalHtml = btn.innerHTML;
+                
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Đang tải...';
+                btn.disabled = true;
+                
+                fetch('/api/reload', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        showToast(data.message || 'Danh sách đã được tải lại thành công!');
+                        loadData();
+                    })
+                    .catch(error => {
+                        console.error('Lỗi khi tải lại:', error);
+                        showToast('Lỗi khi tải lại danh sách', 'error');
+                    })
+                    .finally(() => {
+                        setTimeout(() => {
+                            btn.innerHTML = originalHtml;
+                            btn.disabled = false;
+                        }, 1000);
+                    });
+            });
+            
+            // Xóa bộ lọc
+            document.getElementById('clearFilters').addEventListener('click', function() {
+                document.getElementById('searchInput').value = '';
+                document.getElementById('statusFilter').value = 'all';
+                
+                currentSearch = '';
+                currentStatus = 'all';
+                currentPage = 1;
+                
+                loadData();
+                showToast('Đã xóa tất cả bộ lọc', 'success');
+            });
+            
+            // Xuất CSV
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                exportToCSV();
+            });
+            
+            // Thay đổi khoảng thời gian cập nhật
+            document.getElementById('changeInterval').addEventListener('click', function() {
+                const newInterval = prompt('Nhập khoảng thời gian cập nhật (giây):', updateInterval / 1000);
+                if (newInterval && !isNaN(newInterval) && newInterval > 0) {
+                    updateInterval = newInterval * 1000;
+                    document.getElementById('updateInterval').textContent = newInterval;
+                    startAutoUpdate();
+                    showToast(`Đã thay đổi thời gian cập nhật thành ${newInterval} giây`, 'success');
+                }
+            });
+            
+            // Xử lý phân trang
+            document.getElementById('pagination').addEventListener('click', function(e) {
+                e.preventDefault();
+                if (e.target.tagName === 'A') {
+                    const page = parseInt(e.target.getAttribute('data-page'));
+                    if (!isNaN(page) && page > 0) {
+                        currentPage = page;
+                        loadData();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                }
+            });
+            
+            // Hotkeys
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+F để focus vào ô tìm kiếm
+                if (e.ctrlKey && e.key === 'f') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+                
+                // F5 để reload
+                if (e.key === 'F5') {
+                    e.preventDefault();
+                    document.getElementById('reloadButton').click();
+                }
+                
+                // ESC để xóa tìm kiếm
+                if (e.key === 'Escape') {
+                    document.getElementById('searchInput').value = '';
+                    currentSearch = '';
+                    currentPage = 1;
+                    loadData();
+                }
+            });
+        }
+        
+        // Xuất dữ liệu ra CSV
+        function exportToCSV() {
+            showLoading();
+            
+            fetch(`/api/devices?per_page=1000&status=${currentStatus}&search=${encodeURIComponent(currentSearch)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const headers = ['STT', 'Tên', 'IP', 'Trạng Thái', 'Cập nhật lúc', 
+                                'Thời gian Trạng thái', 'Bắt Đầu Offline', 'Thời Gian Offline'];
+                    const rows = data.devices.map(device => [
+                        device.STT,
+                        device['Tên'],
+                        device.IP,
+                        device['Trạng Thái'],
+                        device['Cập nhật lúc'],
+                        device['Thời gian Trạng thái'],
+                        device['Bắt Đầu Offline'] || '--',
+                        device['Offline Duration'] || '--'
+                    ]);
+                    
+                    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                    csvContent += headers.join(',') + '\n';
+                    rows.forEach(row => {
+                        csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+                    });
+                    
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement('a');
+                    link.setAttribute('href', encodedUri);
+                    link.setAttribute('download', `thiet-bi-${new Date().toISOString().split('T')[0]}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    showToast('Đã xuất file CSV thành công', 'success');
+                })
+                .catch(error => {
+                    console.error('Lỗi khi xuất CSV:', error);
+                    showToast('Lỗi khi xuất file CSV', 'error');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+        
+        // Tự động cập nhật
+        function startAutoUpdate() {
+            if (updateTimer) {
+                clearTimeout(updateTimer);
+            }
+            updateTimer = setTimeout(() => {
+                loadData();
+            }, updateInterval);
+        }
+        
+        // CSS cho spinner
+        const style = document.createElement('style');
+        style.textContent = `
+            .spin {
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Hàm cập nhật thời gian thực cho "Cập Nhật Cuối"
+        function updateRealTimeDates() {
+            const rows = document.querySelectorAll('#deviceTableBody tr');
+            const now = new Date();
+            
+            rows.forEach(row => {
+                const timestamp = row.getAttribute('data-timestamp');
+                const timeCell = row.querySelector('td:nth-child(5) .text-nowrap');
+                
+                if (timestamp && timeCell && timestamp !== 'null') {
+                    // Tính thời gian mới dựa trên timestamp + thời gian đã trôi qua
+                    const updateTime = new Date(parseInt(timestamp) * 1000);
+                    const timeDiff = Math.floor((now - updateTime) / 1000); // Số giây đã trôi qua
+                    
+                    // Cộng thêm thời gian đã trôi qua vào thời gian gốc
+                    const newTime = new Date(updateTime.getTime() + timeDiff * 1000);
+                    
+                    // Định dạng: YYYY-MM-DD HH:MM:SS
+                    const year = newTime.getFullYear();
+                    const month = String(newTime.getMonth() + 1).padStart(2, '0');
+                    const day = String(newTime.getDate()).padStart(2, '0');
+                    const hours = String(newTime.getHours()).padStart(2, '0');
+                    const minutes = String(newTime.getMinutes()).padStart(2, '0');
+                    const seconds = String(newTime.getSeconds()).padStart(2, '0');
+                    
+                    timeCell.textContent = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+                }
+            });
+        }
+
+        // Hàm cập nhật phần "vừa xong"
+        function updateTimeAgo() {
+            const now = new Date();
+            document.querySelectorAll('#deviceTableBody td:nth-child(5) .text-muted').forEach(cell => {
+                // Chỉ hiển thị thời gian hiện tại
+                const timeStr = now.toLocaleTimeString('vi-VN', { 
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                cell.textContent = `cập nhật ${timeStr}`;
+            });
+        }
+        // Hàm cập nhật thời gian thực mỗi giây
+        function startRealTimeUpdates() {
+            setInterval(() => {
+                updateRealTimeDisplay();
+            }, 1000);
+        }
+
+        // Hàm cập nhật hiển thị thời gian thực
+        function updateRealTimeDisplay() {
+            const now = new Date();
+            const currentTimeStr = now.toLocaleTimeString('vi-VN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            //const currentDateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const currentDateStr = `${year}-${month}-${day}`;
+
+            // Cập nhật đồng hồ trên header
+            document.getElementById('currentTime').textContent = currentTimeStr;
+            
+            // Cập nhật thời gian trong bảng
+            const rows = document.querySelectorAll('#deviceTableBody tr');
+            
+            rows.forEach(row => {
+                const timeCell = row.querySelector('td:nth-child(5) .text-nowrap');
+                const timeAgoCell = row.querySelector('td:nth-child(5) .text-muted');
+                
+                if (timeCell && timeAgoCell) {
+                    // Cập nhật thời gian chính xác (ngày + giờ)
+                    timeCell.textContent = `${currentDateStr} ${currentTimeStr}`;
+                    
+                    // Cập nhật trạng thái "vừa xong"
+                    timeAgoCell.textContent = 'vừa xong';
+                }
+                
+                // Cập nhật thời gian offline nếu thiết bị offline
+                if (row.classList.contains('offline-row')) {
+                    const offlineStartCell = row.querySelector('td:nth-child(7) .text-danger');
+                    const durationCell = row.querySelector('td:nth-child(8) .badge');
+                    
+                    if (offlineStartCell && offlineStartCell.textContent !== '--') {
+                        try {
+                            const offlineStart = new Date(offlineStartCell.textContent);
+                            const diffMs = now - offlineStart;
+                            const diffSec = Math.floor(diffMs / 1000);
+                            
+                            const days = Math.floor(diffSec / 86400);
+                            const hours = Math.floor((diffSec % 86400) / 3600);
+                            const minutes = Math.floor((diffSec % 3600) / 60);
+                            const seconds = diffSec % 60;
+                            
+                            // Định dạng thời gian offline
+                            let durationStr = '';
+                            if (days > 0) {
+                                durationStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+                            } else if (hours > 0) {
+                                durationStr = `${hours}h ${minutes}m ${seconds}s`;
+                            } else if (minutes > 0) {
+                                durationStr = `${minutes}m ${seconds}s`;
+                            } else {
+                                durationStr = `${seconds}s`;
+                            }
+                            
+                            if (durationCell) {
+                                durationCell.textContent = durationStr;
+                            }
+                        } catch (e) {
+                            console.error('Lỗi tính thời gian offline:', e);
+                        }
+                    }
+                }
+            });
+        }
+        // Chạy cập nhật mỗi giây
+        setInterval(() => {
+            updateRealTimeDates();
+            updateTimeAgo();
+        }, 1000);
+
+        // Khởi tạo ngay khi trang tải
+        document.addEventListener('DOMContentLoaded', function() {
+            // Chạy lần đầu
+            setTimeout(() => {
+                updateRealTimeDates();
+                updateTimeAgo();
+            }, 100);
+        });
+    </script>
+    <!-- Tooltip Connection Details -->
+    <div id="connectionTooltip" class="connection-tooltip" style="display: none;">
+        <div class="tooltip-header">
+            <div class="device-info">
+                <h5 id="tooltipDeviceName"></h5>
+                <span id="tooltipDeviceIp" class="device-ip"></span>
+            </div>
+            <span id="tooltipStatusBadge" class="status-badge"></span>
+        </div>
+        
+        <div class="tooltip-body">
+            <div class="latency-info">
+                <div class="latency-value">
+                    <span class="label">Độ trễ:</span>
+                    <span id="tooltipLatency" class="value"></span>
+                </div>
+                <div class="quality-indicator">
+                    <span class="label">Chất lượng:</span>
+                    <span id="tooltipQuality" class="quality-badge"></span>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-header">
+                    <span>Biểu đồ độ trễ (10 lần gần nhất)</span>
+                </div>
+                <canvas id="latencyChart" width="250" height="80"></canvas>
+            </div>
+            
+            <div class="additional-info">
+                <div class="info-row">
+                    <span class="info-label">Cập nhật:</span>
+                    <span id="tooltipLastUpdate" class="info-value"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Trạng thái từ:</span>
+                    <span id="tooltipStatusSince" class="info-value"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Thời gian Offline:</span>
+                    <span id="tooltipOfflineDuration" class="info-value"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tooltip-footer">
+            <button onclick="refreshDeviceData()" class="btn-refresh">
+                <span class="refresh-icon">↻</span> Kiểm tra lại
+            </button>
+        </div>
+        
+        <div class="tooltip-arrow"></div>
+    </div>
+
+    <style>
+    /* CSS cho tooltip */
+    .connection-tooltip {
+        position: fixed;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        width: 300px;
+        z-index: 10000;
+        border: 1px solid #e0e0e0;
+        font-family: 'Inter', sans-serif;
+        animation: fadeIn 0.2s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tooltip-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 15px 10px;
+        border-bottom: 1px solid #f0f0f0;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px 10px 0 0;
+    }
+
+    .device-info h5 {
+        margin: 0;
+        font-size: 16px;
+        color: #2c3e50;
+    }
+
+    .device-ip {
+        font-size: 12px;
+        color: #7f8c8d;
+        background: #ecf0f1;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin-top: 4px;
+        display: inline-block;
+    }
+
+    .tooltip-body {
+        padding: 15px;
+    }
+
+    .latency-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px dashed #eee;
+    }
+
+    .latency-value .label,
+    .quality-indicator .label {
+        font-size: 12px;
+        color: #7f8c8d;
+        display: block;
+        margin-bottom: 3px;
+    }
+
+    .latency-value .value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+
+    .quality-badge {
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+    }
+
+    .quality-excellent { background: #27ae60; }
+    .quality-good { background: #2ecc71; }
+    .quality-fair { background: #f39c12; }
+    .quality-poor { background: #e67e22; }
+    .quality-bad { background: #e74c3c; }
+    .quality-unknown { background: #95a5a6; }
+
+    .chart-container {
+        margin: 15px 0;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .chart-header {
+        font-size: 11px;
+        color: #7f8c8d;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    .additional-info {
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px dashed #eee;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 12px;
+    }
+
+    .info-label {
+        color: #7f8c8d;
+    }
+
+    .info-value {
+        color: #2c3e50;
+        font-weight: 500;
+        text-align: right;
+        max-width: 60%;
+        word-break: break-word;
+    }
+
+    .tooltip-footer {
+        padding: 10px 15px;
+        border-top: 1px solid #f0f0f0;
+        text-align: center;
+    }
+
+    .btn-refresh {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-refresh:hover {
+        background: #2980b9;
+        transform: translateY(-1px);
+    }
+
+    .refresh-icon {
+        font-size: 14px;
+    }
+
+    .tooltip-arrow {
+        position: absolute;
+        width: 0;
+        height: 0;
+        border-left: 10px solid transparent;
+        border-right: 10px solid transparent;
+        border-top: 10px solid white;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+    }
+
+    .tooltip-arrow:before {
+        content: '';
+        position: absolute;
+        border-left: 11px solid transparent;
+        border-right: 11px solid transparent;
+        border-top: 11px solid #e0e0e0;
+        left: -11px;
+        top: -1px;
+        z-index: -1;
+    }
+    </style>
+
+    <script>
+    // Biến cho tooltip
+    let currentTooltipDeviceIp = null;
+    let latencyChartInstance = null;
+
+    // Hàm hiển thị tooltip khi hover vào tên thiết bị
+    function showDeviceTooltip(ip, deviceName, element) {
+        currentTooltipDeviceIp = ip;
+        
+        fetch(`/api/device-details/${ip}`)
+            .then(response => response.json())
+            .then(data => {
+                if (currentTooltipDeviceIp !== ip) return;
+                
+                const device = data.device;
+                const tooltip = document.getElementById('connectionTooltip');
+                
+                // Điền thông tin
+                document.getElementById('tooltipDeviceName').textContent = device.name;
+                document.getElementById('tooltipDeviceIp').textContent = device.ip;
+                
+                // Trạng thái
+                const statusBadge = document.getElementById('tooltipStatusBadge');
+                if (device.status === 'Online') {
+                    statusBadge.textContent = 'ONLINE';
+                    statusBadge.className = 'status-badge online';
+                } else {
+                    statusBadge.textContent = 'OFFLINE';
+                    statusBadge.className = 'status-badge offline';
+                }
+                
+                // Độ trễ
+                const latencyElement = document.getElementById('tooltipLatency');
+                if (device.latency) {
+                    latencyElement.textContent = device.latency + 'ms';
+                } else {
+                    latencyElement.textContent = '--';
+                }
+                
+                // Chất lượng
+                const qualityElement = document.getElementById('tooltipQuality');
+                qualityElement.textContent = getQualityText(device.connection_quality);
+                qualityElement.className = 'quality-badge quality-' + device.connection_quality;
+                
+                // Thông tin khác
+                document.getElementById('tooltipLastUpdate').textContent = device.last_updated;
+                document.getElementById('tooltipStatusSince').textContent = device.status_since;
+                document.getElementById('tooltipOfflineDuration').textContent = device.offline_duration || '--';
+                
+                // Vẽ biểu đồ
+                drawLatencyChart(device.latency_history || []);
+                
+                // Hiển thị và đặt vị trí tooltip
+                tooltip.style.display = 'block';
+                const rect = element.getBoundingClientRect();
+                tooltip.style.left = (rect.left + window.scrollX) + 'px';
+                tooltip.style.top = (rect.bottom + window.scrollY + 10) + 'px';
+                
+                // Điều chỉnh nếu vượt khỏi màn hình
+                const viewportWidth = window.innerWidth;
+                const tooltipWidth = tooltip.offsetWidth;
+                if (rect.left + tooltipWidth > viewportWidth - 20) {
+                    tooltip.style.left = (rect.right - tooltipWidth + window.scrollX) + 'px';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading device details:', error);
+            });
+    }
+
+    // Hàm ẩn tooltip
+    function hideDeviceTooltip() {
+        const tooltip = document.getElementById('connectionTooltip');
+        tooltip.style.display = 'none';
+        currentTooltipDeviceIp = null;
+        
+        if (latencyChartInstance) {
+            latencyChartInstance.destroy();
+            latencyChartInstance = null;
+        }
+    }
+
+    // Hàm vẽ biểu đồ độ trễ
+    function drawLatencyChart(latencyHistory) {
+        const ctx = document.getElementById('latencyChart').getContext('2d');
+        
+        if (latencyChartInstance) {
+            latencyChartInstance.destroy();
+        }
+        
+        if (!latencyHistory || latencyHistory.length === 0) {
+            ctx.clearRect(0, 0, 250, 80);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#95a5a6';
+            ctx.font = '12px Arial';
+            ctx.fillText('Không có dữ liệu', 125, 40);
+            return;
+        }
+        
+        const labels = latencyHistory.map((_, index) => index + 1);
+        
+        latencyChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Độ trễ (ms)',
+                    data: latencyHistory,
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#3498db',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: false,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        display: true,
+                        grid: { display: false },
+                        ticks: { font: { size: 9 }, color: '#7f8c8d' }
+                    },
+                    y: {
+                        display: true,
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: { 
+                            font: { size: 9 },
+                            color: '#7f8c8d',
+                            callback: function(value) { return value + 'ms'; }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Hàm lấy mô tả chất lượng
+    function getQualityText(quality) {
+        const qualityMap = {
+            'excellent': 'Xuất sắc',
+            'good': 'Tốt',
+            'fair': 'Khá',
+            'poor': 'Kém',
+            'bad': 'Rất kém',
+            'unknown': 'Không xác định'
+        };
+        return qualityMap[quality] || quality;
+    }
+
+    // Hàm refresh dữ liệu thiết bị
+    function refreshDeviceData() {
+        if (currentTooltipDeviceIp) {
+            const button = document.querySelector('.btn-refresh');
+            const originalText = button.innerHTML;
+            
+            button.innerHTML = '<span class="refresh-icon">⟳</span> Đang kiểm tra...';
+            button.disabled = true;
+            
+            fetch(`/api/ping/${currentTooltipDeviceIp}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Tải lại dữ liệu và cập nhật tooltip
+                    loadData();
+                    setTimeout(() => {
+                        const deviceRow = document.querySelector(`.ping-btn[data-ip="${currentTooltipDeviceIp}"]`);
+                        if (deviceRow) {
+                            const deviceNameCell = deviceRow.closest('tr').querySelector('.device-name');
+                            showDeviceTooltip(currentTooltipDeviceIp, deviceNameCell.textContent, deviceNameCell);
+                        }
+                    }, 500);
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    }, 1000);
+                });
+        }
+    }
+
+    // Thêm sự kiện cho tên thiết bị
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sử dụng event delegation cho các tên thiết bị
+        document.addEventListener('mouseover', function(e) {
+            if (e.target.classList.contains('device-name')) {
+                const row = e.target.closest('tr');
+                const ip = row.querySelector('.ping-btn')?.getAttribute('data-ip');
+                const deviceName = e.target.textContent;
+                
+                if (ip) {
+                    showDeviceTooltip(ip, deviceName, e.target);
+                }
+            }
+        });
+        
+        document.addEventListener('mouseout', function(e) {
+            if (e.target.classList.contains('device-name')) {
+                setTimeout(() => {
+                    if (!document.querySelector('.connection-tooltip:hover')) {
+                        hideDeviceTooltip();
+                    }
+                }, 100);
+            }
+        });
+        
+        // Đóng tooltip khi click ra ngoài
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.connection-tooltip') && !e.target.classList.contains('device-name')) {
+                hideDeviceTooltip();
+            }
+        });
+        
+        // Thêm sự kiện cho nút ping trong bảng
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.ping-btn')) {
+                const ip = e.target.closest('.ping-btn').getAttribute('data-ip');
+                pingDevice(ip);
+            }
+        });
+    });
+    </script>
+
+</body>
+</html>
