@@ -818,7 +818,7 @@
             initTheme();
             loadData();
             initEventListeners();
-            startRealTimeUpdates();
+            //startRealTimeUpdates();
             //startAutoUpdate(); #loadData đã gọi 
         });
         
@@ -971,7 +971,7 @@
                 <span>${offlinePercent}% downtime</span>
             `;
         }
-        
+
         // Cập nhật bảng
         function updateTable(data) {
             const tbody = document.getElementById('deviceTableBody');
@@ -1000,10 +1000,11 @@
                 const deviceName = highlightText(device['Tên'], currentSearch);
                 const deviceIP = highlightText(device.IP, currentSearch);
                 
-                // Lấy timestamp
+                // Sử dụng dữ liệu tính toán từ backend
                 const timestamp = device.last_update_timestamp || Math.floor(Date.now() / 1000);
-                const batDauOffline = device['Bắt Đầu Offline'] || '--';
-                const offlineDuration = device['Offline Duration'] || '--';
+                const statusDuration = device._display_status_duration || device['Thời gian Trạng thái'] || '--';
+                const batDauOffline = device._display_offline_start || device['Bắt Đầu Offline'] || '--';
+                const offlineDuration = device._display_offline_duration || device['Offline Duration'] || '--';
                 
                 // Thêm hiển thị độ trễ nếu có
                 const latencyDisplay = device.Latency ? 
@@ -1029,11 +1030,9 @@
                         </td>
                         <td>
                             <div class="text-nowrap">${device['Cập nhật lúc'] || '--'}</div>
-                            <small class="text-muted">
-                                vừa xong
-                            </small>
+                            <small class="text-muted">vừa cập nhật</small>
                         </td>
-                        <td>${device['Thời gian Trạng thái'] || '--'}</td>
+                        <td>${statusDuration}</td>
                         <td>
                             ${!isOnline && batDauOffline !== '--' ? 
                                 `<span class="text-danger fw-bold">${batDauOffline}</span>` : 
@@ -1055,8 +1054,7 @@
                 Hiển thị <strong>${data.devices.length}</strong> trong tổng số <strong>${data.total}</strong> thiết bị
             `;
         }
-        
-        // Tô sáng văn bản
+                // Tô sáng văn bản
         function highlightText(text, search) {
             if (!search || !text) return text;
             
@@ -1382,7 +1380,7 @@
             });
         }
         
-        // Xuất dữ liệu ra CSV
+       // Xuất dữ liệu ra CSV
         function exportToCSV() {
             showLoading();
             
@@ -1390,7 +1388,7 @@
                 .then(response => response.json())
                 .then(data => {
                     const headers = ['STT', 'Tên', 'IP', 'Trạng Thái', 'Cập nhật lúc', 
-                                'Thời gian Trạng thái', 'Bắt Đầu Offline', 'Thời Gian Offline'];
+                                'Thời gian Trạng thái', 'Bắt Đầu Offline', 'Offline Duration'];
                     const rows = data.devices.map(device => [
                         device.STT,
                         device['Tên'],
@@ -1426,7 +1424,6 @@
                     hideLoading();
                 });
         }
-        
         // Tự động cập nhật
         function startAutoUpdate() {
             if (updateTimer) {
@@ -1449,143 +1446,7 @@
             }
         `;
         document.head.appendChild(style);
-        
-        // Hàm cập nhật thời gian thực cho "Cập Nhật Cuối"
-        function updateRealTimeDates() {
-            const rows = document.querySelectorAll('#deviceTableBody tr');
-            const now = new Date();
-            
-            rows.forEach(row => {
-                const timestamp = row.getAttribute('data-timestamp');
-                const timeCell = row.querySelector('td:nth-child(5) .text-nowrap');
-                
-                if (timestamp && timeCell && timestamp !== 'null') {
-                    // Tính thời gian mới dựa trên timestamp + thời gian đã trôi qua
-                    const updateTime = new Date(parseInt(timestamp) * 1000);
-                    const timeDiff = Math.floor((now - updateTime) / 1000); // Số giây đã trôi qua
-                    
-                    // Cộng thêm thời gian đã trôi qua vào thời gian gốc
-                    const newTime = new Date(updateTime.getTime() + timeDiff * 1000);
-                    
-                    // Định dạng: YYYY-MM-DD HH:MM:SS
-                    const year = newTime.getFullYear();
-                    const month = String(newTime.getMonth() + 1).padStart(2, '0');
-                    const day = String(newTime.getDate()).padStart(2, '0');
-                    const hours = String(newTime.getHours()).padStart(2, '0');
-                    const minutes = String(newTime.getMinutes()).padStart(2, '0');
-                    const seconds = String(newTime.getSeconds()).padStart(2, '0');
-                    
-                    timeCell.textContent = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-                }
-            });
-        }
 
-        // Hàm cập nhật phần "vừa xong"
-        function updateTimeAgo() {
-            const now = new Date();
-            document.querySelectorAll('#deviceTableBody td:nth-child(5) .text-muted').forEach(cell => {
-                // Chỉ hiển thị thời gian hiện tại
-                const timeStr = now.toLocaleTimeString('vi-VN', { 
-                    hour12: false,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                cell.textContent = `cập nhật ${timeStr}`;
-            });
-        }
-        // Hàm cập nhật thời gian thực mỗi giây
-        function startRealTimeUpdates() {
-            setInterval(() => {
-                updateRealTimeDisplay();
-            }, 1000);
-        }
-
-        // Hàm cập nhật hiển thị thời gian thực
-        function updateRealTimeDisplay() {
-            const now = new Date();
-            const currentTimeStr = now.toLocaleTimeString('vi-VN', {
-                hour12: false,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            //const currentDateStr = now.toLocaleDateString('vi-VN').replace(/\//g, '-');
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const currentDateStr = `${year}-${month}-${day}`;
-
-            // Cập nhật đồng hồ trên header
-            document.getElementById('currentTime').textContent = currentTimeStr;
-            
-            // Cập nhật thời gian trong bảng
-            const rows = document.querySelectorAll('#deviceTableBody tr');
-            
-            rows.forEach(row => {
-                const timeCell = row.querySelector('td:nth-child(5) .text-nowrap');
-                const timeAgoCell = row.querySelector('td:nth-child(5) .text-muted');
-                
-                if (timeCell && timeAgoCell) {
-                    // Cập nhật thời gian chính xác (ngày + giờ)
-                    timeCell.textContent = `${currentDateStr} ${currentTimeStr}`;
-                    
-                    // Cập nhật trạng thái "vừa xong"
-                    timeAgoCell.textContent = 'vừa xong';
-                }
-                
-                // Cập nhật thời gian offline nếu thiết bị offline
-                if (row.classList.contains('offline-row')) {
-                    const offlineStartCell = row.querySelector('td:nth-child(7) .text-danger');
-                    const durationCell = row.querySelector('td:nth-child(8) .badge');
-                    
-                    if (offlineStartCell && offlineStartCell.textContent !== '--') {
-                        try {
-                            const offlineStart = new Date(offlineStartCell.textContent);
-                            const diffMs = now - offlineStart;
-                            const diffSec = Math.floor(diffMs / 1000);
-                            
-                            const days = Math.floor(diffSec / 86400);
-                            const hours = Math.floor((diffSec % 86400) / 3600);
-                            const minutes = Math.floor((diffSec % 3600) / 60);
-                            const seconds = diffSec % 60;
-                            
-                            // Định dạng thời gian offline
-                            let durationStr = '';
-                            if (days > 0) {
-                                durationStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-                            } else if (hours > 0) {
-                                durationStr = `${hours}h ${minutes}m ${seconds}s`;
-                            } else if (minutes > 0) {
-                                durationStr = `${minutes}m ${seconds}s`;
-                            } else {
-                                durationStr = `${seconds}s`;
-                            }
-                            
-                            if (durationCell) {
-                                durationCell.textContent = durationStr;
-                            }
-                        } catch (e) {
-                            console.error('Lỗi tính thời gian offline:', e);
-                        }
-                    }
-                }
-            });
-        }
-        // Chạy cập nhật mỗi giây
-        setInterval(() => {
-            updateRealTimeDates();
-            updateTimeAgo();
-        }, 1000);
-
-        // Khởi tạo ngay khi trang tải
-        document.addEventListener('DOMContentLoaded', function() {
-            // Chạy lần đầu
-            setTimeout(() => {
-                updateRealTimeDates();
-                updateTimeAgo();
-            }, 100);
-        });
     </script>
 
     <!-- Tooltip Connection Details -->

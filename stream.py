@@ -17,7 +17,7 @@ app = Flask(__name__)
 FILE_PATH = r"D:\danhsach.txt"
 
 # Webhook URL cho Microsoft Teams
-TEAMS_WEBHOOK_URL = "https://riekerworld.webhook.office.com/webhookb2/f5b03295-141d-4b4d-a771-be86875ad09a@d05c6e7a-e5d1-4af0-a643-f829e6e08d31/IncomingWebhook/d6a8fd7946b743a6b5c27f5a46a5c19d/c09c20f3-d95c-479b-8554-e2914cce2924/V2P0qYVz3A5_XBSdH0NZBMdt2BhBUTmMCCaH03fxp_rRk1"
+TEAMS_WEBHOOK_URL = "hs://riekerworld.webhook.office.com/webhookb2/f5b03295-141d-4b4d-a771-be86875ad09a@d05c6e7a-e5d1-4af0-a643-f829e6e08d31/IncomingWebhook/d6a8fd7946b743a6b5c27f5a46a5c19d/c09c20f3-d95c-479b-8554-e2914cce2924/V2P0qYVz3A5_XBSdH0NZBMdt2BhBUTmMCCaH03fxp_rRk1"
 
 def send_teams_alert(device_name, ip, status):
     try:
@@ -189,6 +189,8 @@ class DeviceMonitor:
                                     "Trạng Thái": "Checking...",
                                     "Cập nhật lúc": "--",
                                     "Thời gian Trạng thái": "--",
+                                    "Bắt Đầu Offline": "--",  
+                                    "Offline Duration": "--",
                                     "previous_status": None,
                                     "status_change_time": None,
                                     "offline_since": None,
@@ -362,46 +364,63 @@ class DeviceMonitor:
             # Tính thời gian trạng thái hiện tại
             if device.get("Thời gian Trạng thái") and device["Thời gian Trạng thái"] != "--":
                 try:
-                    status_change_time = datetime.strptime(device["Thời gian Trạng thái"], "%Y-%m-%d %H:%M:%S")
-                    duration = current_time - status_change_time
-                    total_seconds = int(duration.total_seconds())
-                    
-                    if total_seconds < 60:
-                        device["_display_status_duration"] = f"{total_seconds} giây"
-                    elif total_seconds < 3600:
-                        device["_display_status_duration"] = f"{total_seconds // 60} phút"
-                    elif total_seconds < 86400:
-                        device["_display_status_duration"] = f"{total_seconds // 3600} giờ"
+                    # Nếu là thời điểm, tính khoảng thời gian
+                    if ":" in device["Thời gian Trạng thái"] and "-" in device["Thời gian Trạng thái"]:
+                        status_change_time = datetime.strptime(device["Thời gian Trạng thái"], "%Y-%m-%d %H:%M:%S")
+                        duration = current_time - status_change_time
+                        total_seconds = int(duration.total_seconds())
+                        
+                        if total_seconds < 60:
+                            status_duration_str = f"{total_seconds} giây"
+                        elif total_seconds < 3600:
+                            status_duration_str = f"{total_seconds // 60} phút"
+                        elif total_seconds < 86400:
+                            status_duration_str = f"{total_seconds // 3600} giờ"
+                        else:
+                            status_duration_str = f"{total_seconds // 86400} ngày"
+                        
+                        # Tạo trường mới cho frontend
+                        device["_display_status_duration"] = status_duration_str
                     else:
-                        device["_display_status_duration"] = f"{total_seconds // 86400} ngày"
-                except:
+                        # Nếu đã là chuỗi thời gian, giữ nguyên
+                        device["_display_status_duration"] = device["Thời gian Trạng thái"]
+                except Exception as e:
                     device["_display_status_duration"] = "--"
             else:
                 device["_display_status_duration"] = "--"
             
             # Tính thời gian offline nếu đang offline
-            if device["Trạng Thái"] == "Offline" and device.get("offline_since"):
-                try:
-                    offline_duration = current_time - device["offline_since"]
-                    total_seconds = int(offline_duration.total_seconds())
-                    
-                    days = total_seconds // 86400
-                    hours = (total_seconds % 86400) // 3600
-                    minutes = (total_seconds % 3600) // 60
-                    seconds = total_seconds % 60
-                    
-                    if days > 0:
-                        device["_display_offline_duration"] = f"{days}d {hours}h {minutes}m"
-                    elif hours > 0:
-                        device["_display_offline_duration"] = f"{hours}h {minutes}m {seconds}s"
-                    elif minutes > 0:
-                        device["_display_offline_duration"] = f"{minutes}m {seconds}s"
-                    else:
-                        device["_display_offline_duration"] = f"{seconds}s"
-                except:
+            if device["Trạng Thái"] == "Offline":
+                if device.get("offline_since"):
+                    try:
+                        offline_duration = current_time - device["offline_since"]
+                        total_seconds = int(offline_duration.total_seconds())
+                        
+                        days = total_seconds // 86400
+                        hours = (total_seconds % 86400) // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        seconds = total_seconds % 60
+                        
+                        if days > 0:
+                            device["_display_offline_duration"] = f"{days}d {hours}h {minutes}m"
+                        elif hours > 0:
+                            device["_display_offline_duration"] = f"{hours}h {minutes}m {seconds}s"
+                        elif minutes > 0:
+                            device["_display_offline_duration"] = f"{minutes}m {seconds}s"
+                        else:
+                            device["_display_offline_duration"] = f"{seconds}s"
+                        
+                        # Cập nhật thời gian bắt đầu offline
+                        device["_display_offline_start"] = device["offline_since"].strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception as e:
+                        device["_display_offline_duration"] = device.get("Offline Duration", "--")
+                        device["_display_offline_start"] = device.get("Bắt Đầu Offline", "--")
+                else:
                     device["_display_offline_duration"] = device.get("Offline Duration", "--")
+                    device["_display_offline_start"] = device.get("Bắt Đầu Offline", "--")
             else:
-                device["_display_offline_duration"] = device.get("Offline Duration", "--")
+                device["_display_offline_duration"] = "--"
+                device["_display_offline_start"] = "--"
         
         # Áp dụng tìm kiếm
         if search and search.strip():
@@ -643,4 +662,4 @@ def get_stats():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+    app.run(debug=True, host='0.0.0.0', port=5500, use_reloader=False)
