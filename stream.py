@@ -10,7 +10,6 @@ import csv
 from io import StringIO
 import json
 import re
-import concurrent.futures
 
 app = Flask(__name__)
 
@@ -126,49 +125,26 @@ class DeviceMonitor:
                         if len(parts) == 2:
                             name = parts[0].strip()
                             ip = parts[1].strip()
-                            
-                            # Kiểm tra trạng thái ban đầu
-                            initial_status, initial_latency = check_status(ip)
-                            current_time = datetime.now()
-                            
-                            # Khởi tạo thiết bị
-                            device_data = {
+                            devices.append({
                                 "STT": len(devices) + 1,
                                 "Tên": name,
                                 "IP": ip,
-                                "Trạng Thái": initial_status,
-                                "Cập nhật lúc": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                "Thời gian Trạng thái": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                "previous_status": initial_status,
-                                "status_change_time": current_time,
+                                "Trạng Thái": "Checking...",
+                                "Cập nhật lúc": "--",
+                                "Thời gian Trạng thái": "--",
+                                "Bắt Đầu Offline": "--",  
+                                "Offline Duration": "--",  
+                                "previous_status": None,
+                                "status_change_time": None,
+                                "offline_since": None,
                                 "last_alert_sent": None,
-                                "Latency": initial_latency,
+                                "Latency": None,
                                 "LatencyHistory": [],
-                                "last_update_timestamp": time.time(),
-                                "Bắt Đầu Offline": "--",
-                                "Offline Duration": "--",
-                                "offline_since": None
-                            }
-                            
-                            # Nếu offline ngay từ đầu, set thời gian bắt đầu
-                            if initial_status == "Offline":
-                                device_data["offline_since"] = current_time
-                                device_data["Bắt Đầu Offline"] = current_time.strftime("%Y-%m-%d %H:%M:%S")
-                                device_data["Offline Duration"] = "0s"
-                            
-                            # Thêm lịch sử độ trễ nếu có
-                            if initial_latency:
-                                device_data["LatencyHistory"].append({
-                                    "timestamp": time.time(),
-                                    "latency": initial_latency
-                                })
-                            
-                            devices.append(device_data)
-                
-                print(f"Đã tải {len(devices)} thiết bị từ file")
+                                "last_update_timestamp": time.time()
+                            })
+            print(f"Đã tải {len(devices)} thiết bị từ file")
         else:
             print(f"File {FILE_PATH} không tồn tại!")
-        
         return devices
 
     def reload_devices(self):
@@ -186,94 +162,56 @@ class DeviceMonitor:
                             name = parts[0].strip()
                             ip = parts[1].strip()
                             
-                            current_time = datetime.now()
-                            
                             if ip in old_devices:
-                                # Giữ lại thông tin từ thiết bị cũ
                                 old_device = old_devices[ip]
-                                
-                                # Kiểm tra trạng thái hiện tại
-                                current_status, current_latency = check_status(ip)
-                                
-                                device_data = {
+                                device = {
                                     "STT": len(new_devices) + 1,
                                     "Tên": name,
                                     "IP": ip,
-                                    "Trạng Thái": current_status,
-                                    "Cập nhật lúc": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                    "Thời gian Trạng thái": old_device.get("Thời gian Trạng thái", "--"),
-                                    "previous_status": old_device.get("previous_status"),
-                                    "status_change_time": old_device.get("status_change_time"),
-                                    "offline_since": old_device.get("offline_since"),
-                                    "last_alert_sent": old_device.get("last_alert_sent"),
-                                    "Latency": current_latency,
+                                    "Trạng Thái": old_device["Trạng Thái"],
+                                    "Cập nhật lúc": old_device["Cập nhật lúc"],
+                                    "Thời gian Trạng thái": old_device["Thời gian Trạng thái"],
+                                    "Bắt Đầu Offline": old_device.get("Bắt Đầu Offline", "--"),  
+                                    "Offline Duration": old_device.get("Offline Duration", "--"),
+                                    "previous_status": old_device["previous_status"],
+                                    "status_change_time": old_device["status_change_time"],
+                                    "offline_since": old_device["offline_since"],
+                                    "last_alert_sent": old_device["last_alert_sent"],
+                                    "Latency": old_device.get("Latency"),
                                     "LatencyHistory": old_device.get("LatencyHistory", []),
-                                    "last_update_timestamp": time.time(),
-                                    "Bắt Đầu Offline": old_device.get("Bắt Đầu Offline", "--"),
-                                    "Offline Duration": old_device.get("Offline Duration", "--")
+                                    "last_update_timestamp": old_device.get("last_update_timestamp", time.time())
                                 }
-                                
-                                # Nếu đang offline, giữ lại thời gian bắt đầu offline
-                                if current_status == "Offline" and not device_data["offline_since"]:
-                                    device_data["offline_since"] = current_time
-                                    device_data["Bắt Đầu Offline"] = current_time.strftime("%Y-%m-%d %H:%M:%S")
-                                    device_data["Offline Duration"] = "0s"
-                                
-                                # Thêm độ trễ hiện tại vào lịch sử
-                                if current_latency:
-                                    device_data["LatencyHistory"].append({
-                                        "timestamp": time.time(),
-                                        "latency": current_latency
-                                    })
-                                    if len(device_data["LatencyHistory"]) > 20:
-                                        device_data["LatencyHistory"] = device_data["LatencyHistory"][-20:]
-                                
                             else:
-                                # Thiết bị mới
-                                current_status, current_latency = check_status(ip)
-                                
-                                device_data = {
+                                device = {
                                     "STT": len(new_devices) + 1,
                                     "Tên": name,
                                     "IP": ip,
-                                    "Trạng Thái": current_status,
-                                    "Cập nhật lúc": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                    "Thời gian Trạng thái": current_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                    "previous_status": current_status,
-                                    "status_change_time": current_time,
+                                    "Trạng Thái": "Checking...",
+                                    "Cập nhật lúc": "--",
+                                    "Thời gian Trạng thái": "--",
+                                    "previous_status": None,
+                                    "status_change_time": None,
                                     "offline_since": None,
                                     "last_alert_sent": None,
-                                    "Latency": current_latency,
+                                    "Latency": None,
                                     "LatencyHistory": [],
-                                    "last_update_timestamp": time.time(),
-                                    "Bắt Đầu Offline": "--",
-                                    "Offline Duration": "--"
+                                    "last_update_timestamp": time.time()
                                 }
-                                
-                                # Nếu offline ngay từ đầu
-                                if current_status == "Offline":
-                                    device_data["offline_since"] = current_time
-                                    device_data["Bắt Đầu Offline"] = current_time.strftime("%Y-%m-%d %H:%M:%S")
-                                    device_data["Offline Duration"] = "0s"
-                                
-                                # Thêm lịch sử độ trễ
-                                if current_latency:
-                                    device_data["LatencyHistory"].append({
-                                        "timestamp": time.time(),
-                                        "latency": current_latency
-                                    })
                             
-                            new_devices.append(device_data)
-            
-            # Cập nhật lại STT
-            for i, device in enumerate(new_devices):
-                device["STT"] = i + 1
+                            new_devices.append(device)
             
             old_count = len(self.devices)
             self.devices = new_devices
             new_count = len(self.devices)
             
-            print(f"Đã reload thiết bị: {old_count} → {new_count}")
+            for i, device in enumerate(self.devices):
+                device["STT"] = i + 1
+            
+            print(f"Đã reload thiết bị: {old_count} -> {new_count}")
+            
+            removed_devices = set(old_devices.keys()) - {device["IP"] for device in self.devices}
+            if removed_devices:
+                print(f"Thiết bị đã bị xóa: {removed_devices}")
             
             return new_count
         else:
@@ -289,20 +227,56 @@ class DeviceMonitor:
             
             for device in self.devices:
                 new_status, latency = check_status(device["IP"])
-                old_status = device.get("previous_status")
-                
-                # DEBUG: In ra trạng thái nếu cần
-                if new_status != old_status and old_status is not None:
-                    print(f"🔄 {device['Tên']} ({device['IP']}): {old_status} → {new_status}")
+                old_status = device["previous_status"]
                 
                 # Đảm bảo các trường tồn tại
-                device.setdefault("Bắt Đầu Offline", "--")
-                device.setdefault("Offline Duration", "--")
+                if "Bắt Đầu Offline" not in device:
+                    device["Bắt Đầu Offline"] = "--"
+                if "Offline Duration" not in device:
+                    device["Offline Duration"] = "--"
                 
-                # CẬP NHẬT BẮT BUỘC MỖI LẦN KIỂM TRA
+                # Xử lý khi trạng thái thay đổi
+                if new_status != old_status and old_status is not None:
+                    device["Thời gian Trạng thái"] = current_time_str
+                    device["status_change_time"] = current_time
+                    
+                    if new_status == "Offline":
+                        device["offline_since"] = current_time
+                        device["Bắt Đầu Offline"] = current_time_str
+                        # Gửi cảnh báo nếu chưa gửi Offline
+                        if device.get("last_alert_sent") != "offline":
+                            try:
+                                send_teams_alert(device["Tên"], device["IP"], "Offline")
+                                device["last_alert_sent"] = "offline"
+                                print(f"✅ Đã gửi cảnh báo Teams: {device['Tên']} OFFLINE")
+                            except Exception as e:
+                                print(f"❌ Lỗi gửi cảnh báo Offline: {e}")
+                    
+                    elif new_status == "Online" and old_status == "Offline":
+                        device["offline_since"] = None
+                        device["Bắt Đầu Offline"] = "--"
+                        device["Offline Duration"] = "--"
+                        # Gửi cảnh báo khi từ Offline -> Online
+                        try:
+                            send_teams_alert(device["Tên"], device["IP"], "Online")
+                            device["last_alert_sent"] = "online"
+                            print(f"✅ Đã gửi cảnh báo Teams: {device['Tên']} ONLINE")
+                        except Exception as e:
+                            print(f"❌ Lỗi gửi cảnh báo Online: {e}")
+                
+                # Nếu đây là lần đầu tiên (khởi tạo)
+                if old_status is None:
+                    device["previous_status"] = new_status
+                    device["Thời gian Trạng thái"] = current_time_str
+                    if new_status == "Offline":
+                        device["offline_since"] = current_time
+                        device["Bắt Đầu Offline"] = current_time_str
+                
+                # Cập nhật trạng thái
+                device["previous_status"] = new_status
+                device["Trạng Thái"] = new_status
                 device["Cập nhật lúc"] = current_time_str
                 device["last_update_timestamp"] = current_timestamp
-                device["Trạng Thái"] = new_status  # LUÔN cập nhật trạng thái
                 
                 # Cập nhật độ trễ
                 if latency is not None:
@@ -314,81 +288,122 @@ class DeviceMonitor:
                     if len(device["LatencyHistory"]) > 20:
                         device["LatencyHistory"] = device["LatencyHistory"][-20:]
                 
-                # XỬ LÝ THAY ĐỔI TRẠNG THÁI
-                if new_status != old_status:
-                    device["Thời gian Trạng thái"] = current_time_str
-                    device["status_change_time"] = current_time
-                    
-                    # ONLINE → OFFLINE
-                    if new_status == "Offline" and old_status == "Online":
+                # Tính thời gian offline cho thiết bị offline
+                if new_status == "Offline":
+                    if device["offline_since"]:
+                        offline_duration = current_time - device["offline_since"]
+                        total_seconds = int(offline_duration.total_seconds())
+                        
+                        days = total_seconds // 86400
+                        hours = (total_seconds % 86400) // 3600
+                        minutes = (total_seconds % 3600) // 60
+                        seconds = total_seconds % 60
+                        
+                        if days > 0:
+                            duration_str = f"{days}d {hours}h {minutes}m"
+                        elif hours > 0:
+                            duration_str = f"{hours}h {minutes}m {seconds}s"
+                        elif minutes > 0:
+                            duration_str = f"{minutes}m {seconds}s"
+                        else:
+                            duration_str = f"{seconds}s"
+                        
+                        device["Offline Duration"] = duration_str
+                        
+                        # Chỉ cập nhật Bắt Đầu Offline nếu chưa có
+                        if device["Bắt Đầu Offline"] == "--":
+                            device["Bắt Đầu Offline"] = device["offline_since"].strftime("%Y-%m-%d %H:%M:%S")
+                    else:
+                        # Nếu offline nhưng chưa có thời gian bắt đầu
                         device["offline_since"] = current_time
                         device["Bắt Đầu Offline"] = current_time_str
                         device["Offline Duration"] = "0s"
-                        
-                        # Gửi cảnh báo
-                        if device.get("last_alert_sent") != "offline":
-                            try:
-                                send_teams_alert(device["Tên"], device["IP"], "Offline")
-                                device["last_alert_sent"] = "offline"
-                                print(f"✅ Cảnh báo Teams: {device['Tên']} OFFLINE")
-                            except Exception as e:
-                                print(f"❌ Lỗi cảnh báo Offline: {e}")
-                    
-                    # OFFLINE → ONLINE
-                    elif new_status == "Online" and old_status == "Offline":
-                        # Reset thời gian offline
-                        device["offline_since"] = None
-                        device["Bắt Đầu Offline"] = "--"
-                        device["Offline Duration"] = "--"
-                        
-                        # Gửi cảnh báo phục hồi
-                        try:
-                            send_teams_alert(device["Tên"], device["IP"], "Online")
-                            device["last_alert_sent"] = "online"
-                            print(f"✅ Cảnh báo Teams: {device['Tên']} ONLINE")
-                        except Exception as e:
-                            print(f"❌ Lỗi cảnh báo Online: {e}")
-                    
-                    # Cập nhật trạng thái trước đó
-                    device["previous_status"] = new_status
-                
-                # Nếu không thay đổi nhưng vẫn offline, tính thời gian offline
-                elif new_status == "Offline" and device.get("offline_since"):
-                    offline_duration = current_time - device["offline_since"]
-                    
-                    # Tính toán thời gian offline
-                    days = offline_duration.days
-                    hours, remainder = divmod(offline_duration.seconds, 3600)
-                    minutes, seconds = divmod(remainder, 60)
-                    
-                    if days > 0:
-                        duration_str = f"{days}d {hours}h {minutes}m {seconds}s"
-                    elif hours > 0:
-                        duration_str = f"{hours}h {minutes}m {seconds}s"
-                    elif minutes > 0:
-                        duration_str = f"{minutes}m {seconds}s"
-                    else:
-                        duration_str = f"{seconds}s"
-                    
-                    device["Offline Duration"] = duration_str
-                
-                # Nếu không thay đổi và đang online, đảm bảo các trường offline được reset
-                elif new_status == "Online":
-                    device["Bắt Đầu Offline"] = "--"
-                    device["Offline Duration"] = "--"
+                else:
+                    # Nếu online, reset thời gian offline
                     if "offline_since" in device:
                         device["offline_since"] = None
+                    device["Bắt Đầu Offline"] = "--"
+                    device["Offline Duration"] = "--"
                 
-                # Cập nhật trạng thái trước đó nếu chưa có
-                if device.get("previous_status") is None:
-                    device["previous_status"] = new_status
+                # Tính thời gian trạng thái hiện tại (nếu không phải "--")
+                if device["Thời gian Trạng thái"] != "--":
+                    try:
+                        # Parse thời gian từ string
+                        status_change_str = device["Thời gian Trạng thái"]
+                        status_change_time = datetime.strptime(status_change_str, "%Y-%m-%d %H:%M:%S")
+                        status_duration = current_time - status_change_time
+                        total_seconds = int(status_duration.total_seconds())
+                        
+                        if total_seconds < 60:
+                            status_duration_str = f"{total_seconds} giây"
+                        elif total_seconds < 3600:
+                            status_duration_str = f"{total_seconds // 60} phút"
+                        elif total_seconds < 86400:
+                            status_duration_str = f"{total_seconds // 3600} giờ"
+                        else:
+                            status_duration_str = f"{total_seconds // 86400} ngày"
+                        
+                        # Lưu giá trị tính toán
+                        device["_computed_status_duration"] = status_duration_str
+                    except Exception as e:
+                        print(f"Lỗi tính thời gian trạng thái: {e}")
+                        device["_computed_status_duration"] = "--"
             
-            time.sleep(3)  # Giảm thời gian chờ xuống 3 giây
+            time.sleep(5)
 
     def get_devices(self, search=None, status_filter=None, page=1, per_page=20):
         """Lấy danh sách thiết bị với tìm kiếm, lọc và phân trang"""
         filtered_devices = self.devices.copy()
         
+        current_time = datetime.now()
+        
+        # Tính toán thời gian realtime cho mỗi thiết bị
+        for device in filtered_devices:
+            # Tính thời gian trạng thái hiện tại
+            if device.get("Thời gian Trạng thái") and device["Thời gian Trạng thái"] != "--":
+                try:
+                    status_change_time = datetime.strptime(device["Thời gian Trạng thái"], "%Y-%m-%d %H:%M:%S")
+                    duration = current_time - status_change_time
+                    total_seconds = int(duration.total_seconds())
+                    
+                    if total_seconds < 60:
+                        device["_display_status_duration"] = f"{total_seconds} giây"
+                    elif total_seconds < 3600:
+                        device["_display_status_duration"] = f"{total_seconds // 60} phút"
+                    elif total_seconds < 86400:
+                        device["_display_status_duration"] = f"{total_seconds // 3600} giờ"
+                    else:
+                        device["_display_status_duration"] = f"{total_seconds // 86400} ngày"
+                except:
+                    device["_display_status_duration"] = "--"
+            else:
+                device["_display_status_duration"] = "--"
+            
+            # Tính thời gian offline nếu đang offline
+            if device["Trạng Thái"] == "Offline" and device.get("offline_since"):
+                try:
+                    offline_duration = current_time - device["offline_since"]
+                    total_seconds = int(offline_duration.total_seconds())
+                    
+                    days = total_seconds // 86400
+                    hours = (total_seconds % 86400) // 3600
+                    minutes = (total_seconds % 3600) // 60
+                    seconds = total_seconds % 60
+                    
+                    if days > 0:
+                        device["_display_offline_duration"] = f"{days}d {hours}h {minutes}m"
+                    elif hours > 0:
+                        device["_display_offline_duration"] = f"{hours}h {minutes}m {seconds}s"
+                    elif minutes > 0:
+                        device["_display_offline_duration"] = f"{minutes}m {seconds}s"
+                    else:
+                        device["_display_offline_duration"] = f"{seconds}s"
+                except:
+                    device["_display_offline_duration"] = device.get("Offline Duration", "--")
+            else:
+                device["_display_offline_duration"] = device.get("Offline Duration", "--")
+        
+        # Áp dụng tìm kiếm
         if search and search.strip():
             search_lower = search.lower().strip()
             filtered_devices = [
@@ -396,6 +411,7 @@ class DeviceMonitor:
                 if search_lower in d["Tên"].lower() or search_lower in d["IP"].lower()
             ]
         
+        # Áp dụng lọc trạng thái
         if status_filter and status_filter != "all":
             filtered_devices = [
                 d for d in filtered_devices 
@@ -421,121 +437,21 @@ class DeviceMonitor:
             "offline_count": offline_count
         }
 
+    def format_time_duration(self, seconds):
+        """Format số giây thành chuỗi thời gian dễ đọc"""
+        if seconds < 60:
+            return f"{seconds} giây"
+        elif seconds < 3600:
+            return f"{seconds // 60} phút"
+        elif seconds < 86400:
+            return f"{seconds // 3600} giờ"
+        else:
+            days = seconds // 86400
+            hours = (seconds % 86400) // 3600
+            return f"{days} ngày {hours} giờ"
 # Khởi tạo monitor
 monitor = DeviceMonitor()
-def check_status_parallel(ip):
-    """Kiểm tra trạng thái với xử lý đa luồng"""
-    return ip, check_status(ip)
 
-def update_status_loop_optimized(self):
-    """Phiên bản tối ưu với đa luồng"""
-    print("Bắt đầu vòng lặp cập nhật trạng thái (tối ưu)...")
-    
-    while self.running:
-        start_time = time.time()
-        current_time = datetime.now()
-        current_time_str = current_time.strftime("%Y-%m-%d %H:%M:%S")
-        current_timestamp = time.time()
-        
-        # Sử dụng ThreadPoolExecutor để kiểm tra nhiều thiết bị cùng lúc
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            # Tạo tasks cho tất cả thiết bị
-            future_to_ip = {executor.submit(check_status_parallel, device["IP"]): device["IP"] 
-                        for device in self.devices}
-            
-            # Xử lý kết quả khi hoàn thành
-            for future in concurrent.futures.as_completed(future_to_ip):
-                ip = future_to_ip[future]
-                try:
-                    ip_result, (new_status, latency) = future.result()
-                    
-                    # Tìm thiết bị tương ứng
-                    device = next((d for d in self.devices if d["IP"] == ip), None)
-                    if not device:
-                        continue
-                    
-                    old_status = device.get("previous_status")
-                    
-                    # Cập nhật thông tin cơ bản
-                    device["Cập nhật lúc"] = current_time_str
-                    device["last_update_timestamp"] = current_timestamp
-                    device["Trạng Thái"] = new_status
-                    
-                    # Cập nhật độ trễ
-                    if latency is not None:
-                        device["Latency"] = latency
-                        device["LatencyHistory"].append({
-                            "timestamp": current_timestamp,
-                            "latency": latency
-                        })
-                        if len(device["LatencyHistory"]) > 10:  # Giảm lịch sử để tiết kiệm bộ nhớ
-                            device["LatencyHistory"] = device["LatencyHistory"][-10:]
-                    
-                    # Xử lý thay đổi trạng thái
-                    if new_status != old_status and old_status is not None:
-                        device["Thời gian Trạng thái"] = current_time_str
-                        device["status_change_time"] = current_time
-                        
-                        # OFFLINE → ONLINE
-                        if new_status == "Online" and old_status == "Offline":
-                            device["offline_since"] = None
-                            device["Bắt Đầu Offline"] = "--"
-                            device["Offline Duration"] = "--"
-                            
-                            # Gửi cảnh báo
-                            try:
-                                send_teams_alert(device["Tên"], device["IP"], "Online")
-                                device["last_alert_sent"] = "online"
-                                print(f"✅ {device['Tên']} đã ONLINE")
-                            except Exception as e:
-                                print(f"❌ Lỗi cảnh báo Online: {e}")
-                        
-                        # ONLINE → OFFLINE
-                        elif new_status == "Offline" and old_status == "Online":
-                            device["offline_since"] = current_time
-                            device["Bắt Đầu Offline"] = current_time_str
-                            device["Offline Duration"] = "0s"
-                            
-                            # Gửi cảnh báo
-                            if device.get("last_alert_sent") != "offline":
-                                try:
-                                    send_teams_alert(device["Tên"], device["IP"], "Offline")
-                                    device["last_alert_sent"] = "offline"
-                                    print(f"⚠️ {device['Tên']} đã OFFLINE")
-                                except Exception as e:
-                                    print(f"❌ Lỗi cảnh báo Offline: {e}")
-                        
-                        device["previous_status"] = new_status
-                    
-                    # Cập nhật thời gian offline nếu đang offline
-                    elif new_status == "Offline" and device.get("offline_since"):
-                        offline_duration = current_time - device["offline_since"]
-                        days = offline_duration.days
-                        hours, remainder = divmod(offline_duration.seconds, 3600)
-                        minutes, seconds = divmod(remainder, 60)
-                        
-                        if days > 0:
-                            duration_str = f"{days}d {hours}h {minutes}m {seconds}s"
-                        elif hours > 0:
-                            duration_str = f"{hours}h {minutes}m {seconds}s"
-                        elif minutes > 0:
-                            duration_str = f"{minutes}m {seconds}s"
-                        else:
-                            duration_str = f"{seconds}s"
-                        
-                        device["Offline Duration"] = duration_str
-                    
-                    # Cập nhật previous_status nếu chưa có
-                    if device.get("previous_status") is None:
-                        device["previous_status"] = new_status
-                        
-                except Exception as e:
-                    print(f"Lỗi khi kiểm tra {ip}: {e}")
-        
-        # Tính thời gian thực thi
-        execution_time = time.time() - start_time
-        sleep_time = max(1, 3 - execution_time)  # Đảm bảo mỗi vòng lặp cách nhau 3 giây
-        time.sleep(sleep_time)
 # =============== FLASK ROUTES ===============
 
 @app.route('/')
